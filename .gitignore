@@ -126,3 +126,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# SSL Certificate Files (yeah we kind of don't want to commit those!!)
+cert.pem
+beacon.pem
+beacon.key
