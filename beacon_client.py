@@ -1,6 +1,7 @@
 """Handles the encrypted socket connection between CubeServer and the beacon"""
 
 from errno import EAGAIN
+from time import sleep
 
 import servercom
 
@@ -49,47 +50,54 @@ class BeaconClient:
         if self.v:
             print("Connecting socket")
         while True:
-            if self.v:
-                print("Receiving header")
-            header_bytes = self.rx_bytes(13)
-            if header_bytes is None:
-                continue
-            if header_bytes == b'Keep-Alive\x00\x00\x00':
-                self.tx_bytes(ACK)
-                continue
-            # Check version byte:
-            if header_bytes[0] != BEACONCOM_VERSION[0]:
-                print("Possible BEACONCOM version incompatibility. Please update.")
-            # Get message length:       (+1 is to account for NULL terminator)
-            msg_len = int.from_bytes(header_bytes[3:5], 'big') + 1
-            if self.v:
-                print(f"Receiving message (length {msg_len})...")
-            # Get message:
-            msg = self.rx_bytes(msg_len)
-            if msg[-1] != NUL[0] or len(msg) < msg_len:  # Weird problem; restart the socket:
+            try:
                 if self.v:
-                    print("Sending NAK")
-                # Send NAK:
-                self.tx_bytes(NAK)
-                #self.reconnect()
-                continue
-            if self.v:
-                print("Sending ACK")
-            # Send ACK:
-            self.tx_bytes(ACK)
-            # Trasnmit message:
-            if self.v:
-                print("Running command hook")
-            bytes_txd = self.exe(header_bytes[1], header_bytes[2], msg[:-1])
-            # Check stuff out:
-            if not bytes_txd:
-                self.tx_bytes(NAK)
-                #self.reconnect()
-                continue
-            if self.v:
-                print("Sending OK to server")
-            # Send okay to server:
-            self.tx_bytes(int(bytes_txd % 255).to_bytes(1, 'big') + NUL)
+                    print("Receiving header")
+                header_bytes = self.rx_bytes(13)
+                if header_bytes is None:
+                    continue
+                if header_bytes == b'Keep-Alive\x00\x00\x00':
+                    self.tx_bytes(ACK)
+                    continue
+                # Check version byte:
+                if header_bytes[0] != BEACONCOM_VERSION[0]:
+                    print("Possible BEACONCOM version incompatibility. Please update.")
+                # Get message length:       (+1 is to account for NULL terminator)
+                msg_len = int.from_bytes(header_bytes[3:5], 'big') + 1
+                if self.v:
+                    print(f"Receiving message (length {msg_len})...")
+                # Get message:
+                msg = self.rx_bytes(msg_len)
+                if msg[-1] != NUL[0] or len(msg) < msg_len:  # Weird problem; restart the socket:
+                    if self.v:
+                        print("Sending NAK")
+                    # Send NAK:
+                    self.tx_bytes(NAK)
+                    #self.reconnect()
+                    continue
+                if self.v:
+                    print("Sending ACK")
+                # Send ACK:
+                self.tx_bytes(ACK)
+                # Trasnmit message:
+                if self.v:
+                    print("Running command hook")
+                bytes_txd = self.exe(header_bytes[1], header_bytes[2], msg[:-1])
+                # Check stuff out:
+                if not bytes_txd:
+                    self.tx_bytes(NAK)
+                    #self.reconnect()
+                    continue
+                if self.v:
+                    print("Sending OK to server")
+                # Send okay to server:
+                self.tx_bytes(int(bytes_txd % 255).to_bytes(1, 'big') + NUL)
+            except BrokenPipeError:
+                sleep(1)
+                self.reconnect()
+            except ConnectionRefusedError:
+                sleep(5)
+                self.reconnect()
 
     def close(self):
         self.connection.close_socket()
