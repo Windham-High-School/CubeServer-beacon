@@ -7,15 +7,15 @@ from beacon_client import BeaconClient
 with open('cert.pem', 'r') as fp:
     server_cert=fp.read()
 
-servercom.CUBESERVER_DEFAULT_CONFIG.API_HOST = 'localhost'
+servercom.CUBESERVER_DEFAULT_CONFIG.API_HOST = '192.168.252.1'
 servercom.CUBESERVER_DEFAULT_CONFIG.API_PORT = 8889
 
-c = servercom.Connection(server_cert=server_cert, _force=True)
+c = servercom.Connection(server_cert=server_cert, _force=True, verbose=True)
 bc = None
 while bc is None:
     try:
         bc = BeaconClient(c)
-    except (ConnectionRefusedError, ConnectionResetError, BrokenPipeError):
+    except:
         sleep(1)
         continue
 

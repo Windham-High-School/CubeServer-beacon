@@ -12,6 +12,14 @@ NAK = b'\x15'
 NUL = b'\x00'
 
 
+# Partially stolen from kwarunek's solution here: https://stackoverflow.com/questions/34252273/what-is-the-difference-between-socket-send-and-socket-sendall
+def _sendall(sock, data):
+    ret = sock.send(data)
+    if ret > 0:
+        return _sendall(sock, data[ret:])
+    else:
+        return None
+
 class BeaconClient:
     """Handles the client-side of the connection to the server"""
     
@@ -95,9 +103,9 @@ class BeaconClient:
             except BrokenPipeError:
                 sleep(1)
                 self.reconnect()
-            except ConnectionRefusedError:
-                sleep(5)
-                self.reconnect()
+#            except ConnectionRefusedError:
+#                sleep(5)
+#                self.reconnect()
 
     def close(self):
         self.connection.close_socket()
@@ -112,12 +120,13 @@ class BeaconClient:
             return ConnectionError("Connection from the beacon not established")
         if self.v:
             print(f"Writing {stuff}")
-        #while sent < len(stuff):
-        #    sent += self.sock.send(stuff[sent:])
-        #    if self.v:
-        #        print(f"Sent {sent}/{len(stuff)} bytes")
-        # #self.sock.flush()
-        self.connection.wrapped_socket.sendall(stuff)
+        # sent = 0
+        # while sent < len(stuff):
+        #     sent += self.connection.wrapped_socket.send(stuff[sent:])
+        #     if self.v:
+        #         print(f"Sent {sent}/{len(stuff)} bytes")
+        #self.sock.flush()
+        _sendall(self.connection.wrapped_socket, stuff)
 
     def rx_bytes(self, size: int, chunkby: int = 256) -> bytes:
         """Receives a given number of bytes from the beacon"""
