@@ -1,4 +1,5 @@
-"""Connects to the server & awaits/processes commands"""
+"""A test program that simply prints beacon packets
+"""
 
 from time import sleep
 import servercom
