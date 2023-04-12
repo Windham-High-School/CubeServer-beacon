@@ -2,6 +2,12 @@
 # Made in collaboration with Mr. Douglas Chin
 
 from time import sleep
+import board
+import adafruit_irremote
+import pulseio
+import digitalio
+import time
+import supervisor
 import servercom
 from beacon_client import BeaconClient
 
@@ -85,10 +91,11 @@ while bc is None:
 print("Connected!")
 
 @bc.commandhook
-def tx_message(dest, intensity, message) -> int:
+def command_hook(dest, intensity, message) -> int:
     print("Dest:", dest)
     print("Intensity:", intensity)
     print("Message:", message)
+    tx_message(dest, intensity, message)
     return len(message)
 
 bc.run_client_listener()
