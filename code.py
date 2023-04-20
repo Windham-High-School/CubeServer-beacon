@@ -10,6 +10,7 @@ import time
 import servercom
 from beacon_client import BeaconClient
 from microcontroller import watchdog as w
+from watchdog import WatchDogMode
 import indication
 import supervisor
 
