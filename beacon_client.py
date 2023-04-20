@@ -3,6 +3,8 @@
 from errno import EAGAIN
 from time import sleep
 
+from microcontroller import watchdog as w
+
 import servercom
 
 BEACONCOM_VERSION = b'\x01'
@@ -16,6 +18,7 @@ NUL = b'\x00'
 def _sendall(sock, data):
     ret = sock.send(data)
     if ret > 0:
+        w.feed()
         return _sendall(sock, data[ret:])
     else:
         return None
@@ -126,6 +129,7 @@ class BeaconClient:
         #     if self.v:
         #         print(f"Sent {sent}/{len(stuff)} bytes")
         #self.sock.flush()
+        w.feed()
         _sendall(self.connection.wrapped_socket, stuff)
 
     def rx_bytes(self, size: int, chunkby: int = 256) -> bytes:
@@ -138,6 +142,7 @@ class BeaconClient:
         response = b""
         while True:
             buf = bytearray(min(size-len(response), chunkby))
+            w.feed()
             try:
                 recvd = self.connection.wrapped_socket.recv_into(buf, min(size-len(response), chunkby))
             except OSError as e:

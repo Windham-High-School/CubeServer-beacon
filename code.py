@@ -7,9 +7,12 @@ import adafruit_irremote
 import pulseio
 import digitalio
 import time
-import supervisor
 import servercom
 from beacon_client import BeaconClient
+
+w.timeout=25 # Set a timeout of 25 seconds
+w.mode = WatchDogMode.RESET
+w.feed()
 
 with open('cert.pem', 'r') as fp:
     server_cert=fp.read()
@@ -89,6 +92,9 @@ while bc is None:
         continue
 
 print("Connected!")
+
+w.feed()
+w.timeout=5 # Set a timeout of 5 seconds
 
 @bc.commandhook
 def command_hook(dest, intensity, message) -> int:
