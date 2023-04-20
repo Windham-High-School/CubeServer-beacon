@@ -9,6 +9,7 @@ import digitalio
 import time
 import servercom
 from beacon_client import BeaconClient
+from microcontroller import watchdog as w
 import indication
 import supervisor
 
