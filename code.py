@@ -23,6 +23,7 @@ try:
     indication.set_color(indication.YELLOW)
 
     w.timeout=25 # Set a timeout of 25 seconds
+#    w.mode = WatchDogMode.RAISE
     w.mode = WatchDogMode.RESET
     w.feed()
 
@@ -68,7 +69,7 @@ try:
     bc = None
     while bc is None:
         try:
-            bc = BeaconClient(c)
+            bc = BeaconClient(c, verbose=True)
         except:
             sleep(1)
             continue
@@ -84,8 +85,8 @@ try:
         if len(packet) < 1:
             return
         print(packet)
-        time.sleep(0.15)
         bc.tx_txing() # Make sure the server knows we're transmitting and it's all good
+        time.sleep(0.15)
         encoder.transmit(output, [byte for byte in packet])
         time.sleep(0.15)
 
@@ -100,6 +101,8 @@ try:
             time.sleep(0.15)
             encoder.transmit(output, chunk)
             time.sleep(0.15)
+            w.feed()
+            bc.tx_txing() # Make sure the server knows we're transmitting and it's all good
             i += chunk_size
 
     def tx_message(dest: int, intensity: int, message: bytes):
@@ -134,4 +137,5 @@ except KeyboardInterrupt:
 except Exception as e:
     print(e)
     indication.blink_color(indication.RED)
+    time.sleep(10)
     supervisor.reload()
