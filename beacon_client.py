@@ -12,6 +12,7 @@ BEACONCOM_VERSION = b'\x01'
 ACK = b'\x06'
 NAK = b'\x15'
 NUL = b'\x00'
+TXG = b'\x01'
 
 
 # Partially stolen from kwarunek's solution here: https://stackoverflow.com/questions/34252273/what-is-the-difference-between-socket-send-and-socket-sendall
@@ -99,6 +100,7 @@ class BeaconClient:
                     self.tx_bytes(NAK)
                     #self.reconnect()
                     continue
+                self.tx_bytes(ACK)
                 if self.v:
                     print("Sending OK to server")
                 # Send okay to server:
@@ -116,6 +118,10 @@ class BeaconClient:
     def reconnect(self):
         self.connection.close_socket()
         self.connection.connect_socket()
+
+    def tx_txing(self):
+        """Sends a TXING message to the server"""
+        self.tx_bytes(TXG)
 
     def tx_bytes(self, stuff: bytes) -> int:
         """Sends some stuff to the beacon and returns an int return code"""

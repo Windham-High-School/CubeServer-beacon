@@ -51,11 +51,36 @@ i2c.unlock()
 indication.set_indicator_light(indication.YELLOW)
 
 
+def set_intensity(intensity: int):
+    i2c.try_lock()
+    i2c.writeto(0x28, chr(intensity).encode())
+    i2c.unlock()
+
+
+
+# Actually connect to the server:
+c = servercom.Connection(server_cert=server_cert, _force=True, verbose=True)
+bc = None
+while bc is None:
+    try:
+        bc = BeaconClient(c)
+    except:
+        sleep(1)
+        continue
+
+print("Connected!")
+indication.set_color(indication.GREEN)
+w.feed()
+w.timeout=5 # Set a timeout of 5 seconds
+
+
 def tx_packet(packet: bytes, output=pulse_ir):
+    w.feed()
     if len(packet) < 1:
         return
     print(packet)
     time.sleep(0.15)
+    bc.tx_txing() # Make sure the server knows we're transmitting and it's all good
     encoder.transmit(output, [byte for byte in packet])
     time.sleep(0.15)
 
@@ -72,12 +97,8 @@ def tx_chunk(message: bytes, output=pulse_ir):
         time.sleep(0.15)
         i += chunk_size
 
-def set_intensity(intensity: int):
-    i2c.try_lock()
-    i2c.writeto(0x28, chr(intensity).encode())
-    i2c.unlock()
-
 def tx_message(dest: int, intensity: int, message: bytes):
+    w.feed()
     set_intensity(intensity)
     if dest == 1:
         output = pulse_red
@@ -90,23 +111,6 @@ def tx_message(dest: int, intensity: int, message: bytes):
     for line in message.split(b'\r\n'):
         tx_chunk(line + b'\r\n', output=output)
 
-
-# Actually connect to the server:
-c = servercom.Connection(server_cert=server_cert, _force=True, verbose=True)
-bc = None
-while bc is None:
-    try:
-        bc = BeaconClient(c)
-    except:
-        sleep(1)
-        continue
-
-print("Connected!")
-
-indication.set_color(indication.GREEN)
-
-w.feed()
-w.timeout=5 # Set a timeout of 5 seconds
 
 @bc.commandhook
 def command_hook(dest, intensity, message) -> int:
