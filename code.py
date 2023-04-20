@@ -9,6 +9,15 @@ import digitalio
 import time
 import servercom
 from beacon_client import BeaconClient
+import indication
+import supervisor
+
+if supervisor.runtime.run_reason == supervisor.RunReason.STARTUP:
+    indication.blink_color(indication.GREEN)
+elif supervisor.runtime.run_reason == supervisor.RunReason.SUPERVISOR_RELOAD:
+    indication.blink_color(indication.RED)
+
+indication.set_color(indication.YELLOW)
 
 w.timeout=25 # Set a timeout of 25 seconds
 w.mode = WatchDogMode.RESET
@@ -39,6 +48,7 @@ i2c.try_lock()
 i2c.writeto(0x28, bytes([0x84, 0x30]))
 i2c.unlock()
 
+indication.set_indicator_light(indication.YELLOW)
 
 
 def tx_packet(packet: bytes, output=pulse_ir):
@@ -93,15 +103,19 @@ while bc is None:
 
 print("Connected!")
 
+indication.set_color(indication.GREEN)
+
 w.feed()
 w.timeout=5 # Set a timeout of 5 seconds
 
 @bc.commandhook
 def command_hook(dest, intensity, message) -> int:
+    indication.set_color(indication.BLUE)
     print("Dest:", dest)
     print("Intensity:", intensity)
     print("Message:", message)
     tx_message(dest, intensity, message)
+    indication.set_color(indication.GREEN)
     return len(message)
 
 bc.run_client_listener()
