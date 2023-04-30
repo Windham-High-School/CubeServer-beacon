@@ -136,6 +136,7 @@ except KeyboardInterrupt:
     raise
 except Exception as e:
     print(e)
-    indication.blink_color(indication.RED)
-    time.sleep(10)
+    for _ in range(5):
+        indication.blink_color(indication.RED)
+        time.sleep(1)
     supervisor.reload()
