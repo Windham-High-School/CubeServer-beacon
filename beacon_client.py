@@ -124,6 +124,8 @@ class BeaconClient:
 
     def tx_txing(self):
         """Sends a TXING message to the server"""
+        if self.v:
+            print("Sending TXING")
         self.tx_bytes(TXG)
 
     def tx_bytes(self, stuff: bytes) -> int:
