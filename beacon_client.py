@@ -1,7 +1,6 @@
 """Handles the encrypted socket connection between CubeServer and the beacon"""
 
 from errno import EAGAIN
-from typing import Callable, Optional
 from time import sleep
 
 from microcontroller import watchdog as w
@@ -38,7 +37,7 @@ class BeaconClient:
         self.connection = connection
         self.connection.context.load_cert_chain(certfile=certpath, keyfile=keypath)
         self.connection.connect_socket()
-        self.exe: Optional[Callable] = None
+        self.exe = None
 
     # TODO: This is perhaps not the most appropriate application of decorators?
     # Specify callback in constructor?
