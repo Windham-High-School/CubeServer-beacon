@@ -20,7 +20,7 @@ try:
     elif supervisor.runtime.run_reason == supervisor.RunReason.SUPERVISOR_RELOAD:
         indication.blink_color(indication.RED)
 
-    indication.set_color(indication.YELLOW)
+    indication.set_color(indication.MAGENTA)
 
     w.timeout=25 # Set a timeout of 25 seconds
 #    w.mode = WatchDogMode.RAISE
@@ -51,14 +51,15 @@ try:
     i2c.try_lock()
     i2c.writeto(0x28, bytes([0x84, 0x30]))
     i2c.unlock()
-
-    indication.set_color(indication.YELLOW)
-
-
+    
     def set_intensity(intensity: int):
         i2c.try_lock()
         i2c.writeto(0x28, chr(intensity).encode())
         i2c.unlock()
+
+    set_intensity(0x00)
+
+    indication.set_color(indication.YELLOW)
 
 
 

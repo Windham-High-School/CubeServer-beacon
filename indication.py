@@ -11,6 +11,7 @@ GREEN   = b'\xFF\x00\x00'
 RED     = b'\x00\xFF\x00'
 BLUE    = b'\x00\x00\xFF'
 YELLOW  = b'\xFF\xFF\x00'
+MAGENTA = b'\xFF\x00\xFF'
 OFF     = b'\x00\x00\x00'
 
 # Neopixel power control
