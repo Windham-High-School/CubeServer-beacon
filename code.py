@@ -27,6 +27,8 @@ try:
     w.mode = WatchDogMode.RESET
     w.feed()
 
+    print("Opening cert.pem...")
+
     with open('cert.pem', 'r') as fp:
         server_cert=fp.read()
 
@@ -34,6 +36,9 @@ try:
     servercom.CUBESERVER_DEFAULT_CONFIG.API_PORT = 8889
 
     frequency = 32768
+
+
+    print("Initializing hardware...")
 
     highPower = digitalio.DigitalInOut(board.D10)
     highPower.direction = digitalio.Direction.OUTPUT
@@ -62,6 +67,7 @@ try:
     indication.set_color(indication.YELLOW)
 
 
+    print("Connecting to server...")
 
     # Actually connect to the server:
     c = servercom.Connection(server_cert=server_cert, _force=True, verbose=True)
