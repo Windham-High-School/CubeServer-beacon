@@ -119,9 +119,11 @@ try:
             output = pulse_red
         else:
             output = pulse_ir
-        while message[0] == b'\x07':
+        #while message[0] == b'\x07':
+        #    tx_packet(b'\x07', output=output)
+        #    message = message[1:]
+        for _ in range(4):
             tx_packet(b'\x07', output=output)
-            message = message[1:]
         tx_packet(len(message).to_bytes(2, 'big'), output=output)
         for line in message.split(b'\r\n'):
             tx_chunk(line + b'\r\n', output=output)
