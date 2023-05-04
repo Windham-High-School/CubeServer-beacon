@@ -7,7 +7,7 @@ from microcontroller import watchdog as w
 
 import servercom
 
-BEACONCOM_VERSION = b'\x01'
+BEACONCOM_VERSION = b'\x02'
 
 ACK = b'\x06'
 NAK = b'\x15'
