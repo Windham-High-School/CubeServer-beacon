@@ -10,6 +10,7 @@ import servercom
 import json
 from ucontextlib import contextmanager
 import traceback
+import supervisor
 
 
 CHECK_INTERVAL = 15
@@ -164,11 +165,11 @@ def main():
                         raise
                         
             time.sleep(CHECK_INTERVAL)
-                
-while True:
-    try:
-        main()
-    except Exception as e:
-        handle_error(e)
-        time.sleep(15)
+
+try:
+    main()
+except Exception as e:
+    handle_error(e)
+    time.sleep(15)
+    supervisor.reload()
 
