@@ -8,18 +8,19 @@ import digitalio
 import time
 import servercom
 import json
-import enum
+from ucontextlib import contextmanager
+
 
 CHECK_INTERVAL = 15
     
-class MessageStatus(enum.Enum):
+class MessageStatus:
     SCHEDULED    = "Scheduled"
     TRANSMITTED  = "Transmitted"
     TRANSMITTING = "Transmitting..."
     FAILED       = "Failed"
 
 
-class Destination(enum.Enum):
+class Destination:
     INFRARED = "Infrared"
     VISIBLE = "Visible"
 
@@ -40,7 +41,7 @@ class Connection(servercom.Connection):
         return json.loads(resp[1])
         
 
-    def update_message_status(self, object_id:str, status:MessageStatus):
+    def update_message_status(self, object_id:str, status:str):
         return self.request(
             'PUT',
             f'/beacon/message/{object_id}',
