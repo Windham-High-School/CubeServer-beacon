@@ -29,9 +29,13 @@ class Destination:
 
 class Connection(servercom.Connection):
     def get_next_message(self):
-        resp = self.request('GET', '/beacon/message/next_queued',
-            headers=['User-Agent: CircuitPythonDude']
-        )
+        try:
+            resp = self.request('GET', '/beacon/message/next_queued',
+                headers=['User-Agent: CircuitPythonDude']
+            )
+        except ConnectionError as e:
+            return None
+            
         # {
         #     "id": <hex string representing the object id>,
         #     "timestamp": <epoch timestamp as a decimal>,
