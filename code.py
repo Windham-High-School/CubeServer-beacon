@@ -14,12 +14,13 @@ import supervisor
 
 
 CHECK_INTERVAL = 15
-    
+
 class MessageStatus:
     SCHEDULED    = "Scheduled"
     TRANSMITTED  = "Transmitted"
     TRANSMITTING = "Transmitting..."
     FAILED       = "Failed"
+    MISSED       = "Missed"
 
 
 class Destination:
@@ -35,7 +36,7 @@ class Connection(servercom.Connection):
             )
         except ConnectionError as e:
             return None
-            
+
         # {
         #     "id": <hex string representing the object id>,
         #     "timestamp": <epoch timestamp as a decimal>,
@@ -45,7 +46,7 @@ class Connection(servercom.Connection):
         #     "message": <the message as a UTF-8 str>
         # }
         return json.loads(resp[1])
-        
+
 
     def update_message_status(self, object_id:str, status:str):
         return self.request(
@@ -59,7 +60,7 @@ class Connection(servercom.Connection):
 
 @contextmanager
 def connection():
-	c = Connection()
+	c = Connection(verbose=False)
 	try:
 		yield c
 	finally:
@@ -142,9 +143,9 @@ def main():
     i2c.try_lock()
     i2c.writeto(0x28, bytes([0x84, 0x30]))
     i2c.unlock()
-    
+
     set_intensity(0x00)
-    
+
     with connection() as c:
         while True:
             next_message = c.get_next_message()
@@ -154,20 +155,22 @@ def main():
                 destination = next_message['destination']
                 intensity = next_message['intensity']
                 message = next_message['message']
-                
+
                 if offset < 2*CHECK_INTERVAL:
                     try:
                         c.update_message_status(object_id, MessageStatus.SCHEDULED)
                         if offset > 0:
                             time.sleep(offset)
-                        
+
                         output = pulse_red if destination == Destination.VISIBLE else pulse_ir
                         tx_message(lambda msg, obj_id=object_id: c.update_message_status(obj_id, msg), encoder, output, intensity, message.encode())
                         c.update_message_status(object_id, MessageStatus.TRANSMITTED)
                     except Exception as e:
                         c.update_message_status(object_id, MessageStatus.FAILED)
                         raise
-                        
+                else:
+                    c.update_message_status(object_id, MessageStatus.MISSED)
+
             time.sleep(CHECK_INTERVAL)
 
 try:
