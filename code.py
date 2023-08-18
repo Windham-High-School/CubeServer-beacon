@@ -78,10 +78,11 @@ def handle_error(error):
         print('[Error] Exception', error, e)
 
 
-def set_intensity(intensity: int):
+def set_intensity(intensity: int, reg: Destination):
     i2c = board.I2C()
     i2c.try_lock()
-    i2c.writeto(0x28, chr(intensity).encode())
+    val = (intensity | 0b1000000) if reg == Destination.VISIBLE else (intensity & 0b0111111)
+    i2c.writeto(0x28, chr(val).encode())
     i2c.unlock()
 
 
@@ -110,8 +111,8 @@ def tx_chunk(status_callback, encoder, message: bytes, output):
         i += chunk_size
 
 
-def tx_message(status_callback, encoder, output, intensity: int, message: bytes):
-    set_intensity(intensity)
+def tx_message(status_callback, encoder, destination, output, intensity: int, message: bytes):
+    set_intensity(intensity, destination)
     #while message[0] == b'\x07':
     #    tx_packet(status_callback, b'\x07', output=output)
     #    message = message[1:]
@@ -144,7 +145,8 @@ def main():
     i2c.writeto(0x28, bytes([0x84, 0x30]))
     i2c.unlock()
 
-    set_intensity(0x00)
+    set_intensity(0x00, Destination.INFRARED)
+    set_intensity(0x00, Destination.VISIBLE)
 
     with connection() as c:
         while True:
@@ -163,7 +165,7 @@ def main():
                             time.sleep(offset)
 
                         output = pulse_red if destination == Destination.VISIBLE else pulse_ir
-                        tx_message(lambda msg, obj_id=object_id: c.update_message_status(obj_id, msg), encoder, output, intensity, message.encode())
+                        tx_message(lambda msg, obj_id=object_id: c.update_message_status(obj_id, msg), encoder, destination, output, intensity, message.encode())
                         c.update_message_status(object_id, MessageStatus.TRANSMITTED)
                     except Exception as e:
                         c.update_message_status(object_id, MessageStatus.FAILED)
