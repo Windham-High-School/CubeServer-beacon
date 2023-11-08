@@ -14,6 +14,9 @@ import supervisor
 
 
 CHECK_INTERVAL = 15
+DEMO_MODE = False
+DEMO_DESTINATION = 'Infrared'
+DEMO_INTENSITY = 10
 
 class MessageStatus:
     SCHEDULED    = "Scheduled"
@@ -26,7 +29,6 @@ class MessageStatus:
 class Destination:
     INFRARED = "Infrared"
     VISIBLE = "Visible"
-
 
 class Connection(servercom.Connection):
     def get_next_message(self):
@@ -86,17 +88,16 @@ def set_intensity(intensity: int, reg: Destination):
     i2c.unlock()
 
 
-def tx_packet(status_callback, encoder, packet: bytes, output):
+def tx_packet(encoder, packet: bytes, output):
     if len(packet) < 1:
         return
     print(packet)
-    status_callback(MessageStatus.TRANSMITTING)
     time.sleep(0.15)
     encoder.transmit(output, [byte for byte in packet])
     time.sleep(0.15)
 
 
-def tx_chunk(status_callback, encoder, message: bytes, output):
+def tx_chunk(encoder, message: bytes, output):
     i = 0
     chunk_size = 6
     while i <= len(message):
@@ -107,23 +108,26 @@ def tx_chunk(status_callback, encoder, message: bytes, output):
         time.sleep(0.15)
         encoder.transmit(output, chunk)
         time.sleep(0.15)
-        status_callback(MessageStatus.TRANSMITTING)
         i += chunk_size
 
 
 def tx_message(status_callback, encoder, destination, output, intensity: int, message: bytes):
     set_intensity(intensity, destination)
     #while message[0] == b'\x07':
-    #    tx_packet(status_callback, b'\x07', output=output)
+    #    tx_packet(b'\x07', output=output)
     #    message = message[1:]
+    status_callback(MessageStatus.TRANSMITTING)
     for _ in range(4):
-        tx_packet(status_callback, encoder, b'\x07', output=output)
-    tx_packet(status_callback, encoder, len(message).to_bytes(2, 'big'), output=output)
-    for line in message.split(b'\r\n'):
-        tx_chunk(status_callback, encoder, line + b'\r\n', output=output)
+        tx_packet(encoder, b'\x07', output=output)
+    tx_packet(encoder, len(message).to_bytes(2, 'big'), output=output)
+    messages = message.split(b'\r\n')
+    for i, line in enumerate(messages):
+        if i != len(messages)-1:
+            line += b'\r\n'
+        tx_chunk(encoder, line, output=output)
 
 
-def main():
+def setup():
     frequency = 32768
 
     print("Initializing hardware...")
@@ -148,6 +152,9 @@ def main():
     set_intensity(0x00, Destination.INFRARED)
     set_intensity(0x00, Destination.VISIBLE)
 
+    return encoder, pulse_ir, pulse_red
+
+def main(encoder, pulse_ir, pulse_red):
     with connection() as c:
         while True:
             next_message = c.get_next_message()
@@ -161,6 +168,7 @@ def main():
                 if offset < 2*CHECK_INTERVAL:
                     try:
                         c.update_message_status(object_id, MessageStatus.SCHEDULED)
+                        # TODO: need to account for time of update_message_status
                         if offset > 0:
                             time.sleep(offset)
 
@@ -175,8 +183,19 @@ def main():
 
             time.sleep(CHECK_INTERVAL)
 
+def demo(encoder, pulse_ir, pulse_red):
+    message = 'CSMSG/1.1\r\nDivision: Nanometer\r\nServer: CubeServer/1.7.2-dev\r\nContent-Length: 13\r\nChecksum: 182\r\n\r\nTest Message.'
+    while True:
+        output = pulse_red if DEMO_DESTINATION == Destination.VISIBLE else pulse_ir
+        tx_message(lambda msg: print(msg), encoder, DEMO_DESTINATION, output, DEMO_INTENSITY, message.encode())
+        time.sleep(5)
+
 try:
-    main()
+    (encoder, pulse_ir, pulse_red) = setup()
+    if DEMO_MODE:
+        demo(encoder, pulse_ir, pulse_red)
+    else:
+        main(encoder, pulse_ir, pulse_red)
 except Exception as e:
     handle_error(e)
     time.sleep(15)
