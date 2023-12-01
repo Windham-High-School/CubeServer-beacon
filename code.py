@@ -183,12 +183,71 @@ def main(encoder, pulse_ir, pulse_red):
 
             time.sleep(CHECK_INTERVAL)
 
-def demo(encoder, pulse_ir, pulse_red):
-    message = 'CSMSG/1.1\r\nDivision: Nanometer\r\nServer: CubeServer/1.7.2-dev\r\nContent-Length: 13\r\nChecksum: 182\r\n\r\nTest Message.'
+def get_current_time():
+    return servercom.timetools.Time.now()
+    
+def seconds_to_next_offset(current_time, offsets):
+    seconds_since_hour = int(current_time) % 3600
+
+    for offset in offsets:
+        if seconds_since_hour <= offset:
+            return offset - seconds_since_hour
+
+    return 3600 - seconds_since_hour + offsets[0]
+
+def checksum(message_bytes):
+    """Calculates a simple checksum"""
+    sum = 0
+    for i, byte in enumerate(message_bytes):
+        sum += int(byte) ^ (i * 8)
+    return sum % 255
+
+def prepare_message(
+    message_bytes, division='Nanometer', 
+    line_term=b'\r\n', server=b'CubeServer/1.7.2-dev'
+):
+    """Prepare the message with appropriate headers for sending"""
+    headers = {
+        b"Division": division.encode("ascii"),
+        b"Server": server,
+        b"Content-Length": str(len(message_bytes)).encode("ascii"),
+        b"Checksum": str(checksum(message_bytes)).encode("ascii"),
+    }
+    
+    headers_bytes = line_term.join(
+            header + b": " + value for header, value in headers.items()
+        )
+    
+    return (
+        b"CSMSG/1.1"
+        + line_term
+        + headers_bytes
+        + line_term
+        + line_term
+        + message_bytes
+    )
+
+def demo(encoder, pulse_ir, pulse_red, step=15):
+    offsets = list(range(0, 3600, 60))
+    output = pulse_red if DEMO_DESTINATION == Destination.VISIBLE else pulse_ir
+
+    intensity = 0
+    
     while True:
-        output = pulse_red if DEMO_DESTINATION == Destination.VISIBLE else pulse_ir
-        tx_message(lambda msg: print(msg), encoder, DEMO_DESTINATION, output, DEMO_INTENSITY, message.encode())
-        time.sleep(5)
+        print('Syncing Time...')
+        with connection() as c:
+            c.sync_time()
+
+        current_time = get_current_time()
+        sleep_time = seconds_to_next_offset(current_time, offsets)
+        print(f'Sleeping {sleep_time}')
+        time.sleep(sleep_time)
+        
+        full_message_bytes = prepare_message(f'Current Time: {get_current_time() % 3600}, Intensity: {intensity}'.encode('utf-8'))
+        print('Sending Message', full_message_bytes)
+
+        tx_message(lambda msg: print(msg), encoder, DEMO_DESTINATION, output, DEMO_INTENSITY, full_message_bytes)
+        intensity = (intensity + step) % 255
 
 try:
     (encoder, pulse_ir, pulse_red) = setup()
