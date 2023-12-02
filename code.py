@@ -11,6 +11,7 @@ import json
 from ucontextlib import contextmanager
 import traceback
 import supervisor
+import neopixel
 
 
 CHECK_INTERVAL = 15
@@ -59,6 +60,9 @@ class Connection(servercom.Connection):
             headers=['User-Agent: CircuitPythonDude']
         ).code == 201
 
+
+pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
+pixel.brightness = 0.3
 
 @contextmanager
 def connection():
@@ -152,6 +156,7 @@ def setup():
     set_intensity(0x00, Destination.INFRARED)
     set_intensity(0x00, Destination.VISIBLE)
 
+    pixel.fill((0, 0, 255))
     return encoder, pulse_ir, pulse_red
 
 def main(encoder, pulse_ir, pulse_red):
