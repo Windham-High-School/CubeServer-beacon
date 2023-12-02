@@ -17,7 +17,12 @@ import neopixel
 CHECK_INTERVAL = 15
 DEMO_MODE = False
 DEMO_DESTINATION = 'Infrared'
-DEMO_INTENSITY = 10
+
+PURPLE = (128, 0, 128)
+BLUE = (0, 0, 255)
+RED = (255, 0, 0)
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
 
 class MessageStatus:
     SCHEDULED    = "Scheduled"
@@ -26,6 +31,10 @@ class MessageStatus:
     FAILED       = "Failed"
     MISSED       = "Missed"
 
+class SystemStatus:
+    SUCCESS = BLUE
+    ERROR = RED
+    TRANSMITTING = PURPLE
 
 class Destination:
     INFRARED = "Infrared"
@@ -61,8 +70,18 @@ class Connection(servercom.Connection):
         ).code == 201
 
 
-pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
-pixel.brightness = 0.3
+pixel = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.01)
+
+PIXEL_STATUS = None
+def set_status(status):
+    global PIXEL_STATUS
+
+    color = status
+    if status == SystemStatus.TRANSMITTING:
+        if PIXEL_STATUS == SystemStatus.TRANSMITTING:
+            color = GREEN
+    pixel.fill(color)
+    PIXEL_STATUS = color
 
 @contextmanager
 def connection():
@@ -95,6 +114,7 @@ def set_intensity(intensity: int, reg: Destination):
 def tx_packet(encoder, packet: bytes, output):
     if len(packet) < 1:
         return
+    set_status(SystemStatus.TRANSMITTING)
     print(packet)
     time.sleep(0.15)
     encoder.transmit(output, [byte for byte in packet])
@@ -108,6 +128,7 @@ def tx_chunk(encoder, message: bytes, output):
         chunk = message[i : ((i + chunk_size) if len(message) - i > chunk_size else len(message))]
         if len(chunk) == 0:
             break
+        set_status(SystemStatus.TRANSMITTING)
         print(chunk)
         time.sleep(0.15)
         encoder.transmit(output, chunk)
@@ -129,6 +150,7 @@ def tx_message(status_callback, encoder, destination, output, intensity: int, me
         if i != len(messages)-1:
             line += b'\r\n'
         tx_chunk(encoder, line, output=output)
+    set_status(SystemStatus.SUCCESS)
 
 
 def setup():
@@ -156,7 +178,7 @@ def setup():
     set_intensity(0x00, Destination.INFRARED)
     set_intensity(0x00, Destination.VISIBLE)
 
-    pixel.fill((0, 0, 255))
+    set_status(SystemStatus.SUCCESS)
     return encoder, pulse_ir, pulse_red
 
 def main(encoder, pulse_ir, pulse_red):
@@ -251,7 +273,7 @@ def demo(encoder, pulse_ir, pulse_red, step=15):
         full_message_bytes = prepare_message(f'Current Time: {get_current_time() % 3600}, Intensity: {intensity}'.encode('utf-8'))
         print('Sending Message', full_message_bytes)
 
-        tx_message(lambda msg: print(msg), encoder, DEMO_DESTINATION, output, DEMO_INTENSITY, full_message_bytes)
+        tx_message(lambda msg: print(msg), encoder, DEMO_DESTINATION, output, intensity, full_message_bytes)
         intensity = (intensity + step) % 255
 
 try:
@@ -261,6 +283,7 @@ try:
     else:
         main(encoder, pulse_ir, pulse_red)
 except Exception as e:
+    set_status(SystemStatus.ERROR)
     handle_error(e)
     time.sleep(15)
     supervisor.reload()
