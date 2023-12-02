@@ -106,7 +106,11 @@ def handle_error(error):
 def set_intensity(intensity: int, reg: Destination):
     i2c = board.I2C()
     i2c.try_lock()
-    val = (intensity | 0b1000000) if reg == Destination.VISIBLE else (intensity & 0b0111111)
+    # 2-bits control, 6 bits intensity
+    # 0b00 = the IR power, 0b01 = the red LED power 
+    val = intensity & 0b00111111 # default to control bits to IR
+    if reg == Destination.VISIBLE:
+        val = (val | 0b01000000)
     i2c.writeto(0x28, chr(val).encode())
     i2c.unlock()
 
@@ -274,7 +278,7 @@ def demo(encoder, pulse_ir, pulse_red, step=15):
         print('Sending Message', full_message_bytes)
 
         tx_message(lambda msg: print(msg), encoder, DEMO_DESTINATION, output, intensity, full_message_bytes)
-        intensity = (intensity + step) % 255
+        intensity = (intensity + step) % 63
 
 try:
     (encoder, pulse_ir, pulse_red) = setup()
